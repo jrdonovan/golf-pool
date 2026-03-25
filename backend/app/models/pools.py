@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
+    from .pool_tiers import PoolTier
     from .tournaments import Tournament
 
 
@@ -56,3 +57,5 @@ class Pool(PoolBase, table=True):
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     tournament: "Tournament" = Relationship(back_populates="pools")
+
+    tiers: list["PoolTier"] = Relationship(back_populates="pool", cascade_delete=True)
