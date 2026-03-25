@@ -10,6 +10,7 @@ from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
     from .organizations import Organization
+    from .pools import Pool
 
 
 class TournamentStatus(StrEnum):
@@ -65,4 +66,6 @@ class Tournament(TournamentBase, table=True):
     )
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
-    organization: Organization = Relationship(back_populates="tournaments")
+    organization: "Organization" = Relationship(back_populates="tournaments")
+
+    pools: list["Pool"] = Relationship(back_populates="tournament", cascade_delete=True)
