@@ -1,10 +1,14 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils import get_datetime_utc
+
+if TYPE_CHECKING:
+    from .tournaments import Tournament
 
 
 # Shared properties
@@ -37,3 +41,7 @@ class Organization(OrganizationBase, table=True):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
+
+    tournaments: list["Tournament"] = Relationship(
+        back_populates="organization", cascade_delete=True
+    )
