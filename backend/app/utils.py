@@ -16,6 +16,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def get_datetime_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 @dataclass
 class EmailData:
     html_content: str

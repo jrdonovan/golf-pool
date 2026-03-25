@@ -1,13 +1,11 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from pydantic import EmailStr
 from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
-
-def get_datetime_utc() -> datetime:
-    return datetime.now(timezone.utc)
+from app.utils import get_datetime_utc
 
 
 # Shared properties
@@ -31,7 +29,7 @@ class UserRegister(SQLModel):
 
 # Properties to receive via API on update, all are optional
 class UserUpdate(UserBase):
-    email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore
+    email: EmailStr | None = Field(default=None, max_length=255)
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
@@ -80,7 +78,7 @@ class ItemCreate(ItemBase):
 
 # Properties to receive on item update
 class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    title: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 # Database model, database table inferred from class name

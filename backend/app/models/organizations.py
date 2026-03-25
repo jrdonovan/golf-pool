@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import DateTime
 from sqlmodel import Field, SQLModel
 
-from app.models import get_datetime_utc
+from app.utils import get_datetime_utc
 
 
 # Shared properties
