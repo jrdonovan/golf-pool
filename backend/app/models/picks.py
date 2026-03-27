@@ -8,37 +8,33 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
-    from .picks import Pick
-    from .pools import Pool
+    from .pool_tiers import PoolTier
 
 
 # Shared properties
-class PoolTierBase(SQLModel):
-    name: str = Field(max_length=255)
-    pool_id: uuid.UUID = Field(
-        foreign_key="app.pool.id", nullable=False, ondelete="CASCADE"
-    )
-    description: float | None = Field(default=None, nullable=True, max_length=255)
+class PickBase(SQLModel):
+    name: str = Field(unique=True, max_length=255)
+    submission_id: uuid.UUID = Field(foreign_key="app.submissions.id")
+    pool_tier_id: uuid.UUID = Field(foreign_key="app.pool_tiers.id")
 
 
 # Properties to receive via API on creation
-class PoolTierCreate(PoolTierBase):
+class PickCreate(PickBase):
     pass
 
 
 # Properties to receive via API on deletion
-class PoolTierDelete(SQLModel):
+class PickDelete(SQLModel):
     id: uuid.UUID
 
 
 # Properties to receive via API on update
-class PoolTierUpdate(SQLModel):
+class PickUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
-    description: float | None = Field(default=None, max_length=255)
 
 
 # Database model
-class PoolTier(PoolTierBase, table=True):
+class Pick(PickBase, table=True):
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -48,5 +44,4 @@ class PoolTier(PoolTierBase, table=True):
     )
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
-    pool: "Pool" = Relationship(back_populates="tiers")
-    picks: list["Pick"] = Relationship(back_populates="pool_tier", cascade_delete=True)
+    pool_tier: "PoolTier" = Relationship(back_populates="picks")
