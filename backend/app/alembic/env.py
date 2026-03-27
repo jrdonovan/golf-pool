@@ -17,6 +17,7 @@ assert config.config_file_name is not None
 fileConfig(config.config_file_name)
 
 from app.core.config import settings
+from app.models.courses import Course
 from app.models.organizations import Organization
 from app.models.picks import Pick
 from app.models.player_pool_tiers import PlayerPoolTier
