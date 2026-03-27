@@ -1,8 +1,11 @@
 import os
 from logging.config import fileConfig
 
+import alembic_postgresql_enum
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from sqlmodel import SQLModel # isort:skip
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -13,21 +16,16 @@ config = context.config
 assert config.config_file_name is not None
 fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-# target_metadata = None
-
-from app.models import SQLModel  # noqa
-from app.core.config import settings # noqa
+from app.core.config import settings
+from app.models.organizations import Organization
+from app.models.picks import Pick
+from app.models.players import Player
+from app.models.pool_tiers import PoolTier
+from app.models.pools import Pool
+from app.models.submissions import Submission
+from app.models.tournaments import Tournament
 
 target_metadata = SQLModel.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def get_url():
@@ -48,7 +46,12 @@ def run_migrations_offline():
     """
     url = get_url()
     context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True, compare_type=True
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        compare_type=True,
+        include_schemas=True,
+        version_table_schema="app",
     )
 
     with context.begin_transaction():
@@ -63,6 +66,7 @@ def run_migrations_online():
 
     """
     configuration = config.get_section(config.config_ini_section)
+    assert configuration is not None
     configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(
         configuration,
@@ -72,7 +76,11 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            include_schemas=True,
+            version_table_schema="app",
         )
 
         with context.begin_transaction():
@@ -82,4 +90,5 @@ def run_migrations_online():
 if context.is_offline_mode():
     run_migrations_offline()
 else:
+    run_migrations_online()
     run_migrations_online()
