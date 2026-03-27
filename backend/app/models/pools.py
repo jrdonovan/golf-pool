@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime
+from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils import get_datetime_utc
@@ -24,7 +25,10 @@ class PoolStatus(StrEnum):
 class PoolBase(SQLModel):
     name: str = Field(max_length=255)
     entry_fee: float | None = Field(default=None, nullable=True)
-    status: PoolStatus = Field(default=PoolStatus.not_started)
+    status: PoolStatus = Field(
+        default=PoolStatus.not_started,
+        sa_type=SQLEnum(PoolStatus, schema="app", name="poolstatus"),  # type: ignore
+    )
 
 
 # Properties to receive via API on creation

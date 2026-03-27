@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime
+from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils import get_datetime_utc
@@ -25,7 +26,10 @@ class TournamentBase(SQLModel):
     name: str = Field(max_length=255)
     purse: int | None = Field(default=None, nullable=True)
     format: str | None = Field(default="stroke")
-    status: TournamentStatus = Field(default=TournamentStatus.not_started)
+    status: TournamentStatus = Field(
+        default=TournamentStatus.not_started,
+        sa_type=SQLEnum(TournamentStatus, schema="app", name="tournamentstatus"),  # type: ignore
+    )
     start_date: date
     end_date: date
     timezone: str | None = Field(default=None, max_length=255, nullable=True)
