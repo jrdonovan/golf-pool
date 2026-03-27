@@ -48,6 +48,7 @@ class PlayerTournamentUpdate(SQLModel):
 
 # Database model
 class PlayerTournament(PlayerTournamentBase, table=True):
+    __tablename__ = "player_tournament"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
