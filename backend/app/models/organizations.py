@@ -35,6 +35,8 @@ class OrganizationUpdate(SQLModel):
 
 # Database model
 class Organization(OrganizationBase, table=True):
+    __table_args__ = {"schema": "app"}
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,

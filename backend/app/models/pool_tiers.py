@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class PoolTierBase(SQLModel):
     name: str = Field(max_length=255)
     pool_id: uuid.UUID = Field(
-        foreign_key="pool.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.pool.id", nullable=False, ondelete="CASCADE"
     )
     description: float | None = Field(default=None, nullable=True, max_length=255)
 
@@ -38,6 +38,8 @@ class PoolTierUpdate(SQLModel):
 
 # Database model
 class PoolTier(PoolTierBase, table=True):
+    __table_args__ = {"schema": "app"}
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,

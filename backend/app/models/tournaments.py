@@ -56,9 +56,11 @@ class TournamentUpdate(SQLModel):
 
 # Database model
 class Tournament(TournamentBase, table=True):
+    __table_args__ = {"schema": "app"}
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     organization_id: uuid.UUID = Field(
-        foreign_key="organization.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.organization.id", nullable=False, ondelete="CASCADE"
     )
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,

@@ -46,9 +46,11 @@ class PoolUpdate(SQLModel):
 
 # Database model
 class Pool(PoolBase, table=True):
+    __table_args__ = {"schema": "app"}
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     tournament_id: uuid.UUID = Field(
-        foreign_key="tournament.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.tournament.id", nullable=False, ondelete="CASCADE"
     )
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
