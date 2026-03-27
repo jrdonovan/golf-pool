@@ -11,6 +11,7 @@ from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
     from .pool_tiers import PoolTier
+    from .submissions import Submission
     from .tournaments import Tournament
 
 
@@ -65,3 +66,7 @@ class Pool(PoolBase, table=True):
     tournament: "Tournament" = Relationship(back_populates="pools")
 
     tiers: list["PoolTier"] = Relationship(back_populates="pool", cascade_delete=True)
+
+    submissions: list["Submission"] = Relationship(
+        back_populates="pool", cascade_delete=True
+    )
