@@ -11,6 +11,7 @@ from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
     from .organizations import Organization
+    from .player_tournaments import PlayerTournament
     from .pools import Pool
 
 
@@ -75,3 +76,7 @@ class Tournament(TournamentBase, table=True):
     organization: "Organization" = Relationship(back_populates="tournaments")
 
     pools: list["Pool"] = Relationship(back_populates="tournament", cascade_delete=True)
+
+    player_tournaments: list["PlayerTournament"] = Relationship(
+        back_populates="tournament", cascade_delete=True
+    )
