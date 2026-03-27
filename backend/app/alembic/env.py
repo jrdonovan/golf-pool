@@ -19,6 +19,8 @@ fileConfig(config.config_file_name)
 from app.core.config import settings
 from app.models.organizations import Organization
 from app.models.picks import Pick
+from app.models.player_pool_tiers import PlayerPoolTier
+from app.models.player_tournaments import PlayerTournament
 from app.models.players import Player
 from app.models.pool_tiers import PoolTier
 from app.models.pools import Pool

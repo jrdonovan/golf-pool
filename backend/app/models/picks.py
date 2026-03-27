@@ -8,14 +8,14 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
-    from .pool_tiers import PoolTier
+    from .player_pool_tiers import PlayerPoolTier
+    from .submissions import Submission
 
 
 # Shared properties
 class PickBase(SQLModel):
-    name: str = Field(unique=True, max_length=255)
-    submission_id: uuid.UUID = Field(foreign_key="app.submissions.id")
-    pool_tier_id: uuid.UUID = Field(foreign_key="app.pool_tiers.id")
+    submission_id: uuid.UUID = Field(foreign_key="app.submission.id")
+    player_pool_tier_id: uuid.UUID = Field(foreign_key="app.player_pool_tier.id")
 
 
 # Properties to receive via API on creation
@@ -30,7 +30,7 @@ class PickDelete(SQLModel):
 
 # Properties to receive via API on update
 class PickUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
+    player_pool_tier_id: uuid.UUID
 
 
 # Database model
@@ -44,4 +44,5 @@ class Pick(PickBase, table=True):
     )
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
-    pool_tier: "PoolTier" = Relationship(back_populates="picks")
+    submission: "Submission" = Relationship(back_populates="picks")
+    player_pool_tier: "PlayerPoolTier" = Relationship(back_populates="picks")

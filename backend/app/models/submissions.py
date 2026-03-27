@@ -8,6 +8,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
+    from .picks import Pick
     from .pools import Pool
 
 
@@ -52,3 +53,4 @@ class Submission(SubmissionBase, table=True):
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     pool: "Pool" = Relationship(back_populates="submissions")
+    picks: list["Pick"] = Relationship(back_populates="submission", cascade_delete=True)
