@@ -39,6 +39,7 @@ class PoolTierUpdate(SQLModel):
 
 # Database model
 class PoolTier(PoolTierBase, table=True):
+    __tablename__ = "pool_tier"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
