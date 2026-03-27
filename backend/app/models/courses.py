@@ -3,12 +3,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
-    pass
+    from .course_holes import CourseHole
 
 
 # Shared properties
@@ -61,3 +61,7 @@ class Course(CourseBase, table=True):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
+
+    holes: list["CourseHole"] = Relationship(
+        back_populates="course", cascade_delete=True
+    )
