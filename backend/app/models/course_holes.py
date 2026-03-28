@@ -9,6 +9,7 @@ from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
     from .courses import Course
+    from .player_holes import PlayerHole
 
 
 # Shared properties
@@ -48,3 +49,7 @@ class CourseHole(CourseHoleBase, table=True):
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     course: "Course" = Relationship(back_populates="holes")
+
+    player_holes: list["PlayerHole"] = Relationship(
+        back_populates="course_hole", cascade_delete=True
+    )
