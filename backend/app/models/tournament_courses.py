@@ -9,6 +9,7 @@ from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
     from .courses import Course
+    from .player_rounds import PlayerRound
     from .tournaments import Tournament
 
 
@@ -51,3 +52,6 @@ class TournamentCourse(TournamentCourseBase, table=True):
 
     tournament: "Tournament" = Relationship(back_populates="tournament_courses")
     course: "Course" = Relationship(back_populates="tournament_courses")
+    player_rounds: list["PlayerRound"] = Relationship(
+        back_populates="tournament_course"
+    )

@@ -22,6 +22,7 @@ from app.models.courses import Course
 from app.models.organizations import Organization
 from app.models.picks import Pick
 from app.models.player_pool_tiers import PlayerPoolTier
+from app.models.player_rounds import PlayerRound
 from app.models.player_tournaments import PlayerTournament
 from app.models.players import Player
 from app.models.pool_tiers import PoolTier

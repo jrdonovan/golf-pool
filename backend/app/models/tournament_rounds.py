@@ -8,6 +8,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.utils import get_datetime_utc
 
 if TYPE_CHECKING:
+    from .player_rounds import PlayerRound
     from .tournaments import Tournament
 
 
@@ -48,3 +49,5 @@ class TournamentRound(TournamentRoundBase, table=True):
     updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     tournament: "Tournament" = Relationship(back_populates="tournament_rounds")
+
+    player_rounds: list["PlayerRound"] = Relationship(back_populates="tournament_round")
