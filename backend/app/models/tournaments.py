@@ -3,9 +3,10 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from pydantic import PositiveInt
 from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 from app.utils import get_datetime_utc
 
@@ -27,7 +28,10 @@ class TournamentStatus(StrEnum):
 # Shared properties
 class TournamentBase(SQLModel):
     name: str = Field(max_length=255)
-    purse: int | None = Field(default=None, nullable=True)
+    organization_id: uuid.UUID = Field(
+        foreign_key="app.organization.id", nullable=False, ondelete="CASCADE"
+    )
+    purse: PositiveInt | None = Field(default=None, nullable=True)
     format: str | None = Field(default="stroke")
     status: TournamentStatus = Field(
         default=TournamentStatus.not_started,
@@ -36,7 +40,7 @@ class TournamentBase(SQLModel):
     start_date: date
     end_date: date
     timezone: str | None = Field(default=None, max_length=255, nullable=True)
-    external_id: int | None = Field(default=None, nullable=True)
+    external_id: int | None = Field(default=None, nullable=True, unique=True)
 
 
 # Properties to receive via API on creation
@@ -52,7 +56,8 @@ class TournamentDelete(SQLModel):
 # Properties to receive via API on update
 class TournamentUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
-    purse: int | None = Field(default=None)
+    organization_id: uuid.UUID | None = Field(default=None)
+    purse: PositiveInt | None = Field(default=None)
     format: str | None = Field(default=None)
     status: TournamentStatus | None = Field(default=None)
     start_date: date | None = Field(default=None)
@@ -63,12 +68,14 @@ class TournamentUpdate(SQLModel):
 
 # Database model
 class Tournament(TournamentBase, table=True):
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "name", "organization_id", "start_date", name="uq_tournament_name_org_start"
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID = Field(
-        foreign_key="app.organization.id", nullable=False, ondelete="CASCADE"
-    )
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
