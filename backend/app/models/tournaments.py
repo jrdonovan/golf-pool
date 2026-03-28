@@ -56,6 +56,7 @@ class TournamentDelete(SQLModel):
 # Properties to receive via API on update
 class TournamentUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
+    organization_id: uuid.UUID | None = Field(default=None)
     purse: PositiveInt | None = Field(default=None)
     format: str | None = Field(default=None)
     status: TournamentStatus | None = Field(default=None)
