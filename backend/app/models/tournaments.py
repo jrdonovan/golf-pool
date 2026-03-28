@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .player_tournaments import PlayerTournament
     from .pools import Pool
     from .tournament_courses import TournamentCourse
+    from .tournament_rounds import TournamentRound
 
 
 class TournamentStatus(StrEnum):
@@ -83,5 +84,9 @@ class Tournament(TournamentBase, table=True):
     )
 
     tournament_courses: list["TournamentCourse"] = Relationship(
+        back_populates="tournament", cascade_delete=True
+    )
+
+    tournament_rounds: list["TournamentRound"] = Relationship(
         back_populates="tournament", cascade_delete=True
     )

@@ -28,6 +28,7 @@ from app.models.pool_tiers import PoolTier
 from app.models.pools import Pool
 from app.models.submissions import Submission
 from app.models.tournament_courses import TournamentCourse
+from app.models.tournament_rounds import TournamentRound
 from app.models.tournaments import Tournament
 
 target_metadata = SQLModel.metadata
