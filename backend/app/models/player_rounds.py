@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from pydantic import PositiveInt
 from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -26,7 +27,8 @@ class PlayerRoundBase(SQLModel):
     )
     tee_time: datetime | None = Field(default=None, nullable=True)
     is_complete: bool = Field(default=False)
-    strokes: int = Field(default=0)
+    strokes: PositiveInt = Field(default=0)
+    starting_hole: PositiveInt = Field(ge=1, le=18)
 
 
 # Properties to receive via API on creation
@@ -43,7 +45,8 @@ class PlayerRoundDelete(SQLModel):
 class PlayerRoundUpdate(SQLModel):
     tee_time: datetime | None = Field(default=None)
     is_complete: bool | None = Field(default=None)
-    strokes: int | None = Field(default=None)
+    strokes: PositiveInt | None = Field(default=None)
+    starting_hole: PositiveInt | None = Field(default=None, ge=1, le=18)
 
 
 # Database model
