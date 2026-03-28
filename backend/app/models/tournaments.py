@@ -90,3 +90,14 @@ class Tournament(TournamentBase, table=True):
     tournament_rounds: list["TournamentRound"] = Relationship(
         back_populates="tournament", cascade_delete=True
     )
+
+
+class TournamentPublic(TournamentBase):
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    created_at: datetime | None
+    updated_at: datetime | None
+
+
+class TournamentsPublic(TournamentBase):
+    data: list[TournamentPublic]

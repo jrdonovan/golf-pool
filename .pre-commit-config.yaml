@@ -11,10 +11,10 @@ repos:
           - --unsafe
       - id: end-of-file-fixer
         exclude: |
-            (?x)^(
-                frontend/src/client/.*|
-                backend/app/email-templates/build/.*
-            )$
+          (?x)^(
+              frontend/src/client/.*|
+              backend/app/email-templates/build/.*
+          )$
       - id: trailing-whitespace
         exclude: ^frontend/src/client/.*
   - repo: local
@@ -40,9 +40,9 @@ repos:
         language: unsupported
         types: [python]
 
-      - id: generate-frontend-sdk
-        name: Generate Frontend SDK
-        entry: bash ./scripts/generate-client.sh
-        pass_filenames: false
-        language: unsupported
-        files: ^backend/.*$|^scripts/generate-client\.sh$
+      # - id: generate-frontend-sdk
+      #   name: Generate Frontend SDK
+      #   entry: bash ./scripts/generate-client.sh
+      #   pass_filenames: false
+      #   language: unsupported
+      #   files: ^backend/.*$|^scripts/generate-client\.sh$
