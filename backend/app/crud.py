@@ -4,7 +4,117 @@ from typing import Any
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
+from app.old_models import User, UserCreate, UserUpdate
+
+from .models.organizations import (
+    Organization,
+    OrganizationCreate,
+    OrganizationDelete,
+    OrganizationUpdate,
+)
+
+
+###### Organization Methods ######
+def get_organization(
+    *, session: Session, organization_id: uuid.UUID
+) -> Organization | None:
+    statement = select(Organization).where(Organization.id == organization_id)
+    session_organization = session.exec(statement).first()
+    return session_organization
+
+
+def get_organization_by_name(*, session: Session, name: str) -> Organization | None:
+    statement = select(Organization).where(Organization.name == name)
+    session_organization = session.exec(statement).first()
+    return session_organization
+
+
+def get_organization_by_external_id(
+    *, session: Session, external_id: int
+) -> Organization | None:
+    statement = select(Organization).where(Organization.external_id == external_id)
+    session_organization = session.exec(statement).first()
+    return session_organization
+
+
+def list_organizations(
+    *, session: Session, skip: int = 0, limit: int = 100
+) -> list[Organization]:
+    statement = select(Organization).offset(skip).limit(limit)
+    session_organizations = list(session.exec(statement).all())
+    return session_organizations
+
+
+def create_organization(
+    *, session: Session, organization_in: OrganizationCreate
+) -> Organization:
+    existing_organization = get_organization_by_name(
+        session=session, name=organization_in.name
+    )
+    if existing_organization:
+        raise ValueError("Organization with this name already exists")
+
+    db_obj = Organization.model_validate(organization_in)
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def update_organization(
+    *,
+    session: Session,
+    organization_id: uuid.UUID,
+    update_vals: OrganizationUpdate,
+) -> Organization:
+    db_organization = get_organization(session=session, organization_id=organization_id)
+    if not db_organization:
+        raise ValueError("Organization not found")
+
+    organization_data = update_vals.model_dump(exclude_unset=True)
+    if not organization_data:
+        raise ValueError("No data provided for update")
+
+    if "name" in organization_data:
+        if organization_data["name"] == db_organization.name:
+            # If the name is being updated to the same value, we can skip the uniqueness check
+            del organization_data["name"]
+        else:
+            existing_organization = get_organization_by_name(
+                session=session, name=organization_data["name"]
+            )
+            if existing_organization:
+                raise ValueError("Organization with this name already exists")
+
+    if "external_id" in organization_data:
+        if organization_data["external_id"] == db_organization.external_id:
+            # If the external_id is being updated to the same value, we can skip the uniqueness check
+            del organization_data["external_id"]
+        else:
+            existing_organization = get_organization_by_external_id(
+                session=session, external_id=organization_data["external_id"]
+            )
+            if existing_organization:
+                raise ValueError("Organization with this external_id already exists")
+
+    db_organization.sqlmodel_update(organization_data)
+    session.add(db_organization)
+    session.commit()
+    session.refresh(db_organization)
+    return db_organization
+
+
+def delete_organization(
+    *, session: Session, organization_in: OrganizationDelete
+) -> Any:
+    db_organization = get_organization(
+        session=session, organization_id=organization_in.id
+    )
+    if not db_organization:
+        raise ValueError("Organization not found")
+    session.delete(db_organization)
+    session.commit()
+    return {"ok": True}
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -58,11 +168,3 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
         session.commit()
         session.refresh(db_user)
     return db_user
-
-
-def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -> Item:
-    db_item = Item.model_validate(item_in, update={"owner_id": owner_id})
-    session.add(db_item)
-    session.commit()
-    session.refresh(db_item)
-    return db_item

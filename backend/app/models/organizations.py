@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 # Shared properties
 class OrganizationBase(SQLModel):
     name: str = Field(unique=True, max_length=255)
-    external_id: int | None = Field(default=None, nullable=True)
+    external_id: int | None = Field(default=None, nullable=True, unique=True)
 
 
 # Properties to receive via API on creation
