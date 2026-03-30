@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt
+from datetime import datetime, timezone
+
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator
 
 from app.core.config import settings
 from app.services.api_base import APIBase
@@ -44,8 +46,20 @@ class ScorecardsParams(_QueryParams):
     roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
 
 
-# Response Models
-class OrganizationData(BaseModel):
+################################### Response Models ###################################
+class _LiveGolfDataBaseResponseModel(BaseModel):
+    timestamp: datetime
+
+    @field_validator("timestamp", mode="after")
+    @classmethod
+    def ensure_utc(cls, v: datetime) -> datetime:
+        # If the API sends a naive datetime, explicitly set it to UTC
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+
+
+class OrganizationData(_LiveGolfDataBaseResponseModel):
     orgName: str
     orgId: str
 
