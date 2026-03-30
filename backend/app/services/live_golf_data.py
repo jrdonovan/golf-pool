@@ -174,12 +174,55 @@ class TournamentData(_LiveGolfDataBaseResponseModel):
     players: list[TournamentPlayerData] | None
 
 
-class LeaderboardData(BaseModel):
+class CutLineData(BaseModel):
+    cutCount: PositiveInt | None
+    cutScore: str | None  # TODO: validate format of cut score (e.g. "E", "+2", "-1")
+
+
+class RoundData(BaseModel):
+    roundId: PositiveInt = Field(ge=1, le=4)
+    courseId: str
+    courseName: str
+    strokes: PositiveInt | None
+    scoreToPar: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
+
+
+class LeaderboardPlayerData(TournamentPlayerData):
+    position: str | None  # TODO: validate expected values (1, 2, T1, etc.)
+    total: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
+    currentRoundScore: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
+    totalStrokesFromCompletedRounds: PositiveInt | None
+    currentHole: PositiveInt | None = Field(ge=1, le=18)
+    startingHole: PositiveInt | None = Field(ge=1, le=18)
+    roundComplete: bool | None
+    rounds: list[RoundData]
+    thru: str | None  # TODO: validate format (e.g. "F", "9", "15")
+    currentRound: PositiveInt | None = Field(ge=1, le=4)
+    teeTime: time | None
+    teeTimeTimestamp: datetime | None
+
+    @field_validator("teeTime", mode="before")
+    @classmethod
+    def parse_12hr_time(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # %I is 12-hour clock, %M is minutes, %p is AM/PM
+            # We parse to a datetime first, then extract just the .time()
+            return datetime.strptime(v.lower(), "%I:%M%p").time()
+        return v
+
+
+class LeaderboardData(_LiveGolfDataBaseResponseModel):
     orgId: str
     year: int
     tournId: str
     status: str
     roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
+    roundStatus: str | None  # TODO: figure out expected values
+    lastUpdated: datetime | None
+    cutLines: list[CutLineData] | None
+    leaderboardRows: list[LeaderboardPlayerData]
 
 
 class ScorecardData(BaseModel):
@@ -216,7 +259,7 @@ class LiveGolfData(APIBase):
 
     def get_leaderboard(
         self, org_id: str, tourn_id: str, year: int, round_id: int | None = None
-    ) -> tuple[list[LeaderboardData], bool]:
+    ) -> LeaderboardData:
         """
         Fetches the leaderboard data
         """
@@ -229,8 +272,8 @@ class LiveGolfData(APIBase):
         payload = self.send_request("leaderboard", params=params)
         if not isinstance(payload, list):
             raise RuntimeError("Expected list payload for leaderboard")
-        data = [LeaderboardData.model_validate(item) for item in payload]
-        return data, False
+        data = LeaderboardData.model_validate(payload)
+        return data
 
     def get_players(
         self,
