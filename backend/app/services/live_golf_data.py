@@ -1,7 +1,8 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator
+from pydantic_extra_types.timezone_name import TimeZoneName
 
 from app.core.config import settings
 from app.services.api_base import APIBase
@@ -16,7 +17,7 @@ class _QueryParams(BaseModel):
 
 
 class ScheduleParams(_QueryParams):
-    year: str
+    year: int
     orgId: str | None
 
 
@@ -29,31 +30,33 @@ class PlayersParams(_QueryParams):
 class TournamentParams(_QueryParams):
     orgId: str
     tournId: str
-    year: str
+    year: int
 
 
 class LeaderboardParams(_QueryParams):
     orgId: str
     tournId: str
-    year: str
+    year: int
     roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
 
 
 class ScorecardsParams(_QueryParams):
     orgId: str
     tournId: str
-    year: str
+    year: int
     playerId: str
     roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
 
 
 ################################### Response Models ###################################
 class _LiveGolfDataBaseResponseModel(BaseModel):
-    timestamp: datetime
+    timestamp: datetime | None
 
     @field_validator("timestamp", mode="after")
     @classmethod
-    def ensure_utc(cls, v: datetime) -> datetime:
+    def ensure_utc(cls, v: datetime | None) -> datetime | None:
+        if v is None:
+            return None
         # If the API sends a naive datetime, explicitly set it to UTC
         if v.tzinfo is None:
             return v.replace(tzinfo=timezone.utc)
@@ -89,36 +92,14 @@ class ScheduleTournamentData(BaseModel):
 
 class ScheduleData(_LiveGolfDataBaseResponseModel):
     orgId: str
-    year: str
+    year: int
     schedule: list[ScheduleTournamentData]
 
 
-class LeaderboardData(BaseModel):
-    orgId: str
-    year: str
-    tournId: str
-    status: str
-    roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
-
-
-class BasicPlayerData(BaseModel):
+class PlayerData(BaseModel):
     playerId: str
     firstName: str
     lastName: str
-
-
-class TeeTimeData(BaseModel):
-    roundId: PositiveInt = Field(ge=1, le=4)
-    teeTime: str  # TODO: validate format like "1:40pm"
-    teeTimeTimestamp: str  # TODO: validate this is a UTC date in string format
-    startingHole: PositiveInt = Field(ge=1, le=18)
-
-
-class TournamentPlayerData(BasicPlayerData):
-    courseId: str
-    status: str
-    isAmateur: bool
-    teeTimes: list[TeeTimeData]
 
 
 class LocationData(BaseModel):
@@ -129,37 +110,76 @@ class LocationData(BaseModel):
 
 class HoleData(BaseModel):
     holeId: PositiveInt = Field(ge=1, le=18)
-    par: str  # TODO: validate this is a number in string format
+    par: PositiveInt
 
 
-class CourseData(BaseModel):
+class CourseData(_LiveGolfDataBaseResponseModel):
     courseId: str
     courseName: str
-    host: str  # TODO: validate yes/no
+    host: bool | None
     location: LocationData
-    parFrontNine: int  # TODO: validate this is a number in string format
-    parBackNine: int  # TODO: validate this is a number in string format
-    parTotal: (
-        int  # TODO: validate this is a number in string format & sum of front/back nine
-    )
+    parFrontNine: PositiveInt
+    parBackNine: PositiveInt
+    parTotal: PositiveInt
     holes: list[HoleData]
 
 
-class TournamentData(BaseModel):
+class TeeTimeData(BaseModel):
+    roundId: PositiveInt = Field(ge=1, le=4)
+    teeTime: time | None
+    teeTimeTimestamp: datetime | None
+    startingHole: PositiveInt | None = Field(ge=1, le=18)
+
+    @field_validator("teeTime", mode="before")
+    @classmethod
+    def parse_12hr_time(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # %I is 12-hour clock, %M is minutes, %p is AM/PM
+            # We parse to a datetime first, then extract just the .time()
+            return datetime.strptime(v.lower(), "%I:%M%p").time()
+        return v
+
+
+class TournamentPlayerData(PlayerData):
+    courseId: str | None
+    status: (
+        str | None
+    )  # TODO: validate expected values (complete, wd, cut, dq). Don't know what others exist
+    isAmateur: bool | None
+    teeTimes: list[TeeTimeData] | None
+
+
+class TournamentStatus(StrEnum):
+    not_started = "Not Started"
+    in_progress = "In Progress"
+    complete = "Complete"
+    official = "Official"
+
+
+class TournamentData(_LiveGolfDataBaseResponseModel):
     orgId: str
-    year: str
+    year: int
     tournId: str
     name: str
-    purse: int
-    fedexCupPoints: int
+    purse: PositiveInt | None
+    fedexCupPoints: PositiveInt | None
     date: TournamentDate
-    format: str
+    format: TournamentFormat | None
+    status: TournamentStatus | None
+    currentRound: int  # TODO: validate that value = -1 if status is not started
+    timeZone: TimeZoneName | None
+    courses: list[CourseData] | None
+    players: list[TournamentPlayerData] | None
+
+
+class LeaderboardData(BaseModel):
+    orgId: str
+    year: int
+    tournId: str
     status: str
-    currentRound: PositiveInt
-    timeZone: str
-    courses: list[CourseData]
-    players: list[TournamentPlayerData]
-    timestamp: str  # TODO: validate this is a UTC date in string format
+    roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
 
 
 class ScorecardData(BaseModel):
@@ -188,14 +208,14 @@ class LiveGolfData(APIBase):
         """
         Fetches the schedule data
         """
-        params = ScheduleParams(year=str(year), orgId=str(org_id)).to_params()
+        params = ScheduleParams(year=year, orgId=str(org_id)).to_params()
         payload = self.send_request("schedule", params=params)
         if not isinstance(payload, list):
             raise RuntimeError("Expected list payload for schedule")
         return ScheduleData.model_validate(payload)
 
     def get_leaderboard(
-        self, org_id: str, tourn_id: str, year: str, round_id: int | None = None
+        self, org_id: str, tourn_id: str, year: int, round_id: int | None = None
     ) -> tuple[list[LeaderboardData], bool]:
         """
         Fetches the leaderboard data
@@ -217,7 +237,7 @@ class LiveGolfData(APIBase):
         last_name: str | None = None,
         first_name: str | None = None,
         player_id: str | None = None,
-    ) -> list[BasicPlayerData]:
+    ) -> list[PlayerData]:
         """
         Fetches player data
         """
@@ -227,13 +247,22 @@ class LiveGolfData(APIBase):
         payload = self.send_request("players", params=params)
         if not isinstance(payload, list):
             raise RuntimeError("Expected list payload for players")
-        return [BasicPlayerData.model_validate(item) for item in payload]
+        return [PlayerData.model_validate(item) for item in payload]
+
+    def get_player_by_id(self, player_id: str) -> PlayerData | None:
+        """
+        Fetches player data by ID
+        """
+        players = self.get_players(player_id=player_id)
+        if not players:  # TODO: handle not found exception
+            return None
+        return players[0]
 
     def get_tournament(
         self,
         org_id: str,
         tourn_id: str,
-        year: str,
+        year: int,
     ) -> list[TournamentData]:
         """
         Fetches tournament data
@@ -258,7 +287,7 @@ class LiveGolfData(APIBase):
         params = ScorecardsParams(
             orgId=org_id,
             tournId=tournament_id,
-            year=str(year),
+            year=year,
             playerId=player_id,
             roundId=round_id,
         ).to_params()
