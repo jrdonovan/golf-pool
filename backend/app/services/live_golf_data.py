@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator
 
@@ -64,6 +65,34 @@ class OrganizationData(_LiveGolfDataBaseResponseModel):
     orgId: str
 
 
+class TournamentDate(BaseModel):
+    weekNumber: int
+    start: date
+    end: date
+
+
+class TournamentFormat(StrEnum):
+    stroke = "stroke"
+    team = "team"
+    team_match = "team match"
+
+
+class ScheduleTournamentData(BaseModel):
+    tournId: str
+    name: str
+    date: TournamentDate
+    format: TournamentFormat
+    purse: PositiveInt | None
+    winnersShare: PositiveInt | None
+    fedexCupPoints: PositiveInt | None
+
+
+class ScheduleData(_LiveGolfDataBaseResponseModel):
+    orgId: str
+    year: str
+    schedule: list[ScheduleTournamentData]
+
+
 class LeaderboardData(BaseModel):
     orgId: str
     year: str
@@ -76,22 +105,6 @@ class BasicPlayerData(BaseModel):
     playerId: str
     firstName: str
     lastName: str
-
-
-class TournamentDate(BaseModel):
-    weekNumber: str  # TODO: validate this is a number in string format
-    start: str  # TODO: validate this is a UTC date in string format
-    end: str  # TODO: validate this is a UTC date in string format
-
-
-class ScheduleTournamentData(BaseModel):
-    tournId: str
-    name: str
-    date: TournamentDate
-    format: str
-    purse: int
-    winnersShare: int
-    fedexCupPoints: int
 
 
 class TeeTimeData(BaseModel):
@@ -171,9 +184,7 @@ class LiveGolfData(APIBase):
             raise RuntimeError("Expected list payload for organizations")
         return [OrganizationData.model_validate(item) for item in payload]
 
-    def get_schedule(
-        self, year: int, org_id: int | None = None
-    ) -> list[ScheduleTournamentData]:
+    def get_schedule(self, year: int, org_id: int | None = None) -> ScheduleData:
         """
         Fetches the schedule data
         """
@@ -181,7 +192,7 @@ class LiveGolfData(APIBase):
         payload = self.send_request("schedule", params=params)
         if not isinstance(payload, list):
             raise RuntimeError("Expected list payload for schedule")
-        return [ScheduleTournamentData.model_validate(item) for item in payload]
+        return ScheduleData.model_validate(payload)
 
     def get_leaderboard(
         self, org_id: str, tourn_id: str, year: str, round_id: int | None = None
