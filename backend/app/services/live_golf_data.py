@@ -225,8 +225,23 @@ class LeaderboardData(_LiveGolfDataBaseResponseModel):
     leaderboardRows: list[LeaderboardPlayerData]
 
 
-class ScorecardData(BaseModel):
-    model_config = ConfigDict(extra="allow")
+class PlayerHoleData(HoleData):
+    holeScore: PositiveInt | None
+
+
+class ScorecardData(_LiveGolfDataBaseResponseModel):
+    orgId: str
+    tournId: str
+    year: int
+    playerId: str
+    roundId: PositiveInt = Field(ge=1, le=4)
+    startingHole: PositiveInt | None = Field(ge=1, le=18)
+    roundComplete: bool | None
+    courseId: str
+    currentHole: PositiveInt | None = Field(ge=1, le=18)
+    currentRoundScore: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
+    holes: list[PlayerHoleData] | None
+    totalShots: PositiveInt | None
 
 
 class LiveGolfData(APIBase):
@@ -323,7 +338,7 @@ class LiveGolfData(APIBase):
         year: int,
         player_id: str,
         round_id: int | None = None,
-    ) -> ScorecardData:
+    ) -> list[ScorecardData]:
         """
         Fetches scorecard data
         """
@@ -335,6 +350,6 @@ class LiveGolfData(APIBase):
             roundId=round_id,
         ).to_params()
         payload = self.send_request("scorecard", params=params)
-        if not isinstance(payload, dict):
-            raise RuntimeError("Expected object payload for scorecard")
-        return ScorecardData.model_validate(payload)
+        if not isinstance(payload, list):
+            raise RuntimeError("Expected list payload for scorecard")
+        return [ScorecardData.model_validate(item) for item in payload]
