@@ -1,6 +1,7 @@
 from typing import Any
 
 import requests
+from pydantic import HttpUrl
 
 
 class APIBase:
@@ -9,9 +10,12 @@ class APIBase:
     """
 
     def __init__(
-        self, base_url: str, headers: dict[str, str] | None = None, timeout: int = 10
+        self,
+        base_url: HttpUrl,
+        headers: dict[str, str | None] | None = None,
+        timeout: int = 10,
     ):
-        self.base_url = base_url.rstrip("/")
+        self.base_url = str(base_url).rstrip("/")
         self.headers = headers or {}
         self.timeout = timeout
         self.session = requests.Session()
@@ -21,7 +25,7 @@ class APIBase:
         self,
         endpoint: str,
         method: str = "GET",
-        params: dict[str, str] | None = None,
+        params: dict[str, str | int | float | bool | None] | None = None,
         data: dict | str | None = None,
         json: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
