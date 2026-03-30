@@ -32,13 +32,15 @@ class LeaderboardData(BaseModel):
 
 
 class PlayersParams(_QueryParams):
-    last_name: str | None = None
-    first_name: str | None = None
-    player_id: str | None = None
+    lastName: str | None = None
+    firstName: str | None = None
+    playerId: str | None = None
 
 
 class PlayerData(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    playerId: str
+    firstName: str
+    lastName: str
 
 
 class TournamentsParams(_QueryParams):
@@ -82,11 +84,7 @@ class LiveGolfData(APIBase):
         return [OrganizationData.model_validate(item) for item in payload]
 
     def get_leaderboard(
-        self,
-        org_id: int,
-        tourn_id: str,
-        year: str,
-        round_id: str | None = None,
+        self, org_id: str, tourn_id: str, year: str, round_id: int | None = None
     ) -> tuple[list[LeaderboardData], bool]:
         """
         Fetches the leaderboard data
@@ -113,9 +111,7 @@ class LiveGolfData(APIBase):
         Fetches player data
         """
         params = PlayersParams(
-            last_name=last_name,
-            first_name=first_name,
-            player_id=player_id,
+            lastName=last_name, firstName=first_name, playerId=player_id
         ).to_params()
         payload = self.send_request("players", params=params)
         if not isinstance(payload, list):
