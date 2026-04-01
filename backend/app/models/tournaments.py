@@ -1,9 +1,9 @@
 import uuid
-from datetime import date, datetime
+from datetime import date
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from pydantic import PositiveInt
+from pydantic import NonNegativeInt
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
@@ -30,7 +30,8 @@ class TournamentBase(SQLModel):
     organization_id: uuid.UUID = Field(
         foreign_key="app.organization.id", nullable=False, ondelete="CASCADE"
     )
-    purse: PositiveInt | None = Field(default=None, nullable=True)
+    year: int = Field(ge=1900, le=2100)
+    purse: NonNegativeInt | None = Field(default=None, nullable=True)
     format: str | None = Field(default="stroke")
     status: TournamentStatus = Field(
         default=TournamentStatus.not_started,
@@ -56,7 +57,7 @@ class TournamentDelete(SQLModel):
 class TournamentUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     organization_id: uuid.UUID | None = Field(default=None)
-    purse: PositiveInt | None = Field(default=None)
+    purse: NonNegativeInt | None = Field(default=None)
     format: str | None = Field(default=None)
     status: TournamentStatus | None = Field(default=None)
     start_date: date | None = Field(default=None)
@@ -69,7 +70,7 @@ class TournamentUpdate(SQLModel):
 class Tournament(TournamentBase, TimestampsMixin, table=True):
     __table_args__ = (
         UniqueConstraint(
-            "name", "organization_id", "start_date", name="uq_tournament_name_org_start"
+            "name", "organization_id", "year", name="uq_tournament_name_org_year"
         ),
         {"schema": "app"},
     )
@@ -91,14 +92,3 @@ class Tournament(TournamentBase, TimestampsMixin, table=True):
     tournament_rounds: list["TournamentRound"] = Relationship(
         back_populates="tournament", cascade_delete=True
     )
-
-
-class TournamentPublic(TournamentBase):
-    id: uuid.UUID
-    organization_id: uuid.UUID
-    created_at: datetime | None
-    updated_at: datetime | None
-
-
-class TournamentsPublic(TournamentBase):
-    data: list[TournamentPublic]
