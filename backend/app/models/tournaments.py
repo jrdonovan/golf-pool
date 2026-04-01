@@ -4,11 +4,10 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import PositiveInt
-from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .organizations import Organization
@@ -40,7 +39,7 @@ class TournamentBase(SQLModel):
     start_date: date
     end_date: date
     timezone: str | None = Field(default=None, max_length=255, nullable=True)
-    external_id: int | None = Field(default=None, nullable=True, unique=True)
+    external_id: int | None = Field(default=None, nullable=True)
 
 
 # Properties to receive via API on creation
@@ -67,7 +66,7 @@ class TournamentUpdate(SQLModel):
 
 
 # Database model
-class Tournament(TournamentBase, table=True):
+class Tournament(TournamentBase, TimestampsMixin, table=True):
     __table_args__ = (
         UniqueConstraint(
             "name", "organization_id", "start_date", name="uq_tournament_name_org_start"
@@ -76,11 +75,6 @@ class Tournament(TournamentBase, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     organization: "Organization" = Relationship(back_populates="tournaments")
 

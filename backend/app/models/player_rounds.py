@@ -3,10 +3,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import PositiveInt
-from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .player_holes import PlayerHole
@@ -51,16 +50,11 @@ class PlayerRoundUpdate(SQLModel):
 
 
 # Database model
-class PlayerRound(PlayerRoundBase, table=True):
+class PlayerRound(PlayerRoundBase, TimestampsMixin, table=True):
     __tablename__ = "player_round"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     player_tournament: "PlayerTournament" = Relationship(back_populates="player_rounds")
 

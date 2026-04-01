@@ -1,14 +1,12 @@
 import uuid
-from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import PositiveInt
-from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .course_holes import CourseHole
@@ -67,16 +65,11 @@ class PlayerHoleUpdate(SQLModel):
 
 
 # Database model
-class PlayerHole(PlayerHoleBase, table=True):
+class PlayerHole(PlayerHoleBase, TimestampsMixin, table=True):
     __tablename__ = "player_hole"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     player_round: "PlayerRound" = Relationship(back_populates="player_holes")
 

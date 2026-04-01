@@ -1,13 +1,11 @@
 import uuid
-from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .pool_tiers import PoolTier
@@ -30,6 +28,9 @@ class PoolBase(SQLModel):
         default=PoolStatus.not_started,
         sa_type=SQLEnum(PoolStatus, schema="app", name="poolstatus"),  # type: ignore
     )
+    tournament_id: uuid.UUID = Field(
+        foreign_key="app.tournament.id", nullable=False, ondelete="CASCADE"
+    )
 
 
 # Properties to receive via API on creation
@@ -50,18 +51,10 @@ class PoolUpdate(SQLModel):
 
 
 # Database model
-class Pool(PoolBase, table=True):
+class Pool(PoolBase, TimestampsMixin, table=True):
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    tournament_id: uuid.UUID = Field(
-        foreign_key="app.tournament.id", nullable=False, ondelete="CASCADE"
-    )
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     tournament: "Tournament" = Relationship(back_populates="pools")
 

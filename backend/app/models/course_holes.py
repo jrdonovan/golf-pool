@@ -1,11 +1,9 @@
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .courses import Course
@@ -37,16 +35,11 @@ class CourseHoleUpdate(SQLModel):
 
 
 # Database model
-class CourseHole(CourseHoleBase, table=True):
+class CourseHole(CourseHoleBase, TimestampsMixin, table=True):
     __tablename__ = "course_hole"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     course: "Course" = Relationship(back_populates="holes")
 

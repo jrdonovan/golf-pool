@@ -1,11 +1,10 @@
 import uuid
-from datetime import date, datetime
+from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .player_rounds import PlayerRound
@@ -37,16 +36,11 @@ class TournamentRoundUpdate(SQLModel):
 
 
 # Database model
-class TournamentRound(TournamentRoundBase, table=True):
+class TournamentRound(TournamentRoundBase, TimestampsMixin, table=True):
     __tablename__ = "tournament_round"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     tournament: "Tournament" = Relationship(back_populates="tournament_rounds")
 

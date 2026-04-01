@@ -1,11 +1,9 @@
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .picks import Pick
@@ -39,16 +37,11 @@ class PlayerPoolTierUpdate(SQLModel):
 
 
 # Database model
-class PlayerPoolTier(PlayerPoolTierBase, table=True):
+class PlayerPoolTier(PlayerPoolTierBase, TimestampsMixin, table=True):
     __tablename__ = "player_pool_tier"
     __table_args__ = {"schema": "app"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     pool_tier: "PoolTier" = Relationship(back_populates="player_pool_tiers")
     picks: list["Pick"] = Relationship(
