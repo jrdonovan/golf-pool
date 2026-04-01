@@ -15,7 +15,7 @@ async def read_organizations(session: SessionDep, skip: int = 0, limit: int = 10
     return organizations
 
 
-@router.get("/import")
+@router.post("/import")
 async def import_organizations(session: SessionDep):
     client = LiveGolfData()
     incoming_organizations = client.get_organizations()
