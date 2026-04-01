@@ -1,7 +1,15 @@
 from datetime import date, datetime, time, timezone
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    NonNegativeInt,
+    PositiveInt,
+    field_validator,
+    model_validator,
+)
 from pydantic_extra_types.timezone_name import TimeZoneName
 
 from app.core.config import settings
@@ -18,13 +26,24 @@ class _QueryParams(BaseModel):
 
 class ScheduleParams(_QueryParams):
     year: int
-    orgId: str | None
+    orgId: str
 
 
 class PlayersParams(_QueryParams):
     lastName: str | None = None
     firstName: str | None = None
     playerId: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def at_least_one_field(cls, values):
+        if not any(
+            values.get(field) for field in ("lastName", "firstName", "playerId")
+        ):
+            raise ValueError(
+                "At least one of lastName, firstName, or playerId must be provided"
+            )
+        return values
 
 
 class TournamentParams(_QueryParams):
@@ -37,7 +56,7 @@ class LeaderboardParams(_QueryParams):
     orgId: str
     tournId: str
     year: int
-    roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
+    roundId: PositiveInt | None = Field(default=None, le=4)
 
 
 class ScorecardsParams(_QueryParams):
@@ -45,12 +64,12 @@ class ScorecardsParams(_QueryParams):
     tournId: str
     year: int
     playerId: str
-    roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
+    roundId: PositiveInt | None = Field(default=None, le=4)
 
 
 ################################### Response Models ###################################
 class _LiveGolfDataBaseResponseModel(BaseModel):
-    timestamp: datetime | None
+    timestamp: datetime | None = Field(default=None)
 
     @field_validator("timestamp", mode="after")
     @classmethod
@@ -69,7 +88,7 @@ class OrganizationData(BaseModel):
 
 
 class TournamentDate(BaseModel):
-    weekNumber: int
+    weekNumber: PositiveInt = Field(le=53)
     start: date
     end: date
 
@@ -86,9 +105,9 @@ class ScheduleTournamentData(BaseModel):
     name: str
     date: TournamentDate
     format: TournamentFormat
-    purse: PositiveInt | None
-    winnersShare: PositiveInt | None
-    fedexCupPoints: PositiveInt | None
+    purse: NonNegativeInt | None = Field(default=None)
+    winnersShare: NonNegativeInt | None = Field(default=None)
+    fedexCupPoints: NonNegativeInt | None = Field(default=None)
 
 
 class ScheduleData(_LiveGolfDataBaseResponseModel):
@@ -105,19 +124,19 @@ class PlayerData(BaseModel):
 
 class LocationData(BaseModel):
     city: str
-    state: str | None
+    state: str | None = Field(default=None)
     country: str
 
 
 class HoleData(BaseModel):
-    holeId: PositiveInt = Field(ge=1, le=18)
+    holeId: PositiveInt = Field(le=18)
     par: PositiveInt
 
 
 class CourseData(_LiveGolfDataBaseResponseModel):
     courseId: str
     courseName: str
-    host: bool | None
+    host: bool | None = Field(default=None)
     location: LocationData
     parFrontNine: PositiveInt
     parBackNine: PositiveInt
@@ -126,10 +145,10 @@ class CourseData(_LiveGolfDataBaseResponseModel):
 
 
 class TeeTimeData(BaseModel):
-    roundId: PositiveInt = Field(ge=1, le=4)
-    teeTime: time | None
-    teeTimeTimestamp: datetime | None
-    startingHole: PositiveInt | None = Field(ge=1, le=18)
+    roundId: PositiveInt = Field(le=4)
+    teeTime: time | None = Field(default=None)
+    teeTimeTimestamp: datetime | None = Field(default=None)
+    startingHole: PositiveInt | None = Field(default=None, le=18)
 
     @field_validator("teeTime", mode="before")
     @classmethod
@@ -144,12 +163,12 @@ class TeeTimeData(BaseModel):
 
 
 class TournamentPlayerData(PlayerData):
-    courseId: str | None
-    status: (
-        str | None
+    courseId: str | None = Field(default=None)
+    status: str | None = Field(
+        default=None
     )  # TODO: validate expected values (complete, wd, cut, dq). Don't know what others exist
-    isAmateur: bool | None
-    teeTimes: list[TeeTimeData] | None
+    isAmateur: bool | None = Field(default=None)
+    teeTimes: list[TeeTimeData] | None = Field(default=None)
 
 
 class TournamentStatus(StrEnum):
@@ -164,43 +183,55 @@ class TournamentData(_LiveGolfDataBaseResponseModel):
     year: int
     tournId: str
     name: str
-    purse: PositiveInt | None
-    fedexCupPoints: PositiveInt | None
+    purse: NonNegativeInt | None = Field(default=None)
+    fedexCupPoints: NonNegativeInt | None = Field(default=None)
     date: TournamentDate
-    format: TournamentFormat | None
-    status: TournamentStatus | None
+    format: TournamentFormat | None = Field(default=None)
+    status: TournamentStatus | None = Field(default=None)
     currentRound: int  # TODO: validate that value = -1 if status is not started
-    timeZone: TimeZoneName | None
-    courses: list[CourseData] | None
-    players: list[TournamentPlayerData] | None
+    timeZone: TimeZoneName | None = Field(default=None)
+    courses: list[CourseData] = Field(default_factory=list)
+    players: list[TournamentPlayerData] = Field(default_factory=list)
 
 
 class CutLineData(BaseModel):
-    cutCount: PositiveInt | None
-    cutScore: str | None  # TODO: validate format of cut score (e.g. "E", "+2", "-1")
+    cutCount: NonNegativeInt | None = Field(default=None)
+    cutScore: str | None = Field(
+        default=None
+    )  # TODO: validate format of cut score (e.g. "E", "+2", "-1")
 
 
 class RoundData(BaseModel):
-    roundId: PositiveInt = Field(ge=1, le=4)
+    roundId: PositiveInt = Field(le=4)
     courseId: str
     courseName: str
-    strokes: PositiveInt | None
-    scoreToPar: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
+    strokes: NonNegativeInt | None = Field(default=None)
+    scoreToPar: str | None = Field(
+        default=None
+    )  # TODO: validate format (e.g. "E", "+2", "-1")
 
 
 class LeaderboardPlayerData(TournamentPlayerData):
-    position: str | None  # TODO: validate expected values (1, 2, T1, etc.)
-    total: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
-    currentRoundScore: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
-    totalStrokesFromCompletedRounds: PositiveInt | None
-    currentHole: PositiveInt | None = Field(ge=1, le=18)
-    startingHole: PositiveInt | None = Field(ge=1, le=18)
-    roundComplete: bool | None
-    rounds: list[RoundData]
-    thru: str | None  # TODO: validate format (e.g. "F", "9", "15")
-    currentRound: PositiveInt | None = Field(ge=1, le=4)
-    teeTime: time | None
-    teeTimeTimestamp: datetime | None
+    position: str | None = Field(
+        default=None
+    )  # TODO: validate expected values (1, 2, T1, etc.)
+    total: str | None = Field(
+        default=None
+    )  # TODO: validate format (e.g. "E", "+2", "-1")
+    currentRoundScore: str | None = Field(
+        default=None
+    )  # TODO: validate format (e.g. "E", "+2", "-1")
+    totalStrokesFromCompletedRounds: NonNegativeInt | None = Field(default=None)
+    currentHole: PositiveInt | None = Field(default=None, le=18)
+    startingHole: PositiveInt | None = Field(default=None, le=18)
+    roundComplete: bool | None = Field(default=None)
+    rounds: list[RoundData] = Field(default_factory=list)
+    thru: str | None = Field(
+        default=None
+    )  # TODO: validate format (e.g. "F", "9", "15")
+    currentRound: PositiveInt | None = Field(default=None, le=4)
+    teeTime: time | None = Field(default=None)
+    teeTimeTimestamp: datetime | None = Field(default=None)
 
     @field_validator("teeTime", mode="before")
     @classmethod
@@ -219,15 +250,15 @@ class LeaderboardData(_LiveGolfDataBaseResponseModel):
     year: int
     tournId: str
     status: str
-    roundId: PositiveInt | None = Field(default=None, ge=1, le=4)
-    roundStatus: str | None  # TODO: figure out expected values
-    lastUpdated: datetime | None
-    cutLines: list[CutLineData] | None
-    leaderboardRows: list[LeaderboardPlayerData]
+    roundId: PositiveInt | None = Field(default=None, le=4)
+    roundStatus: str | None = Field(default=None)  # TODO: figure out expected values
+    lastUpdated: datetime | None = Field(default=None)
+    cutLines: list[CutLineData] | None = Field(default=None)
+    leaderboardRows: list[LeaderboardPlayerData] = Field(default_factory=list)
 
 
 class PlayerHoleData(HoleData):
-    holeScore: PositiveInt | None
+    holeScore: NonNegativeInt | None = Field(default=None)
 
 
 class ScorecardData(_LiveGolfDataBaseResponseModel):
@@ -235,14 +266,16 @@ class ScorecardData(_LiveGolfDataBaseResponseModel):
     tournId: str
     year: int
     playerId: str
-    roundId: PositiveInt = Field(ge=1, le=4)
-    startingHole: PositiveInt | None = Field(ge=1, le=18)
-    roundComplete: bool | None
+    roundId: PositiveInt = Field(le=4)
+    startingHole: PositiveInt | None = Field(default=None, le=18)
+    roundComplete: bool | None = Field(default=None)
     courseId: str
-    currentHole: PositiveInt | None = Field(ge=1, le=18)
-    currentRoundScore: str | None  # TODO: validate format (e.g. "E", "+2", "-1")
-    holes: list[PlayerHoleData] | None
-    totalShots: PositiveInt | None
+    currentHole: PositiveInt | None = Field(default=None, le=18)
+    currentRoundScore: str | None = Field(
+        default=None
+    )  # TODO: validate format (e.g. "E", "+2", "-1")
+    holes: list[PlayerHoleData] = Field(default_factory=list)
+    totalShots: PositiveInt | None = Field(default=None)
 
 
 class LiveGolfData(APIBase):
@@ -263,11 +296,11 @@ class LiveGolfData(APIBase):
             raise RuntimeError("Expected list payload for organizations")
         return [OrganizationData.model_validate(item) for item in payload]
 
-    def get_schedule(self, year: int, org_id: int | None = None) -> ScheduleData:
+    def get_schedule(self, year: int, org_id: str) -> ScheduleData:
         """
         Fetches the schedule data
         """
-        params = ScheduleParams(year=year, orgId=str(org_id)).to_params()
+        params = ScheduleParams(year=year, orgId=org_id).to_params()
         payload = self.send_request("schedule", params=params)
         if not isinstance(payload, dict):
             raise RuntimeError("Expected dict payload for schedule")
