@@ -78,6 +78,7 @@ class TournamentFormat(StrEnum):
     stroke = "stroke"
     team = "team"
     team_match = "team match"
+    stableford = "stableford"
 
 
 class ScheduleTournamentData(BaseModel):
