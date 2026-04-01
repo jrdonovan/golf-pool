@@ -63,7 +63,7 @@ class _LiveGolfDataBaseResponseModel(BaseModel):
         return v
 
 
-class OrganizationData(_LiveGolfDataBaseResponseModel):
+class OrganizationData(BaseModel):
     orgName: str
     orgId: str
 

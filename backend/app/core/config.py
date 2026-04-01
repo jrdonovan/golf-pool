@@ -93,5 +93,9 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    LIVE_GOLF_DATA_API_KEY: str | None
+    LIVE_GOLF_DATA_API_HOST: str
+    LIVE_GOLF_DATA_BASE_URL: HttpUrl
+
 
 settings = Settings()  # type: ignore
