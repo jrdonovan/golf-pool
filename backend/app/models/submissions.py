@@ -2,7 +2,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 from app.utils import TimestampsMixin
 
@@ -13,14 +13,12 @@ if TYPE_CHECKING:
 
 # Shared properties
 class SubmissionBase(SQLModel):
-    name: str = Field(max_length=255)
-    pool_id: uuid.UUID = Field(
-        foreign_key="app.pool.id", nullable=False, ondelete="CASCADE"
-    )
-    submitter_name: str = Field(max_length=255, nullable=False)
-    submitter_email: EmailStr = Field(max_length=255, nullable=False)
+    name: str
+    pool_id: uuid.UUID = Field(foreign_key="app.pool.id", ondelete="CASCADE")
+    submitter_name: str
+    submitter_email: EmailStr
     total_score: float = Field(default=0)
-    tiebreaker_strokes: int | None = Field(default=None, nullable=True)
+    tiebreaker_strokes: int
 
 
 # Properties to receive via API on creation
@@ -35,15 +33,21 @@ class SubmissionDelete(SQLModel):
 
 # Properties to receive via API on update
 class SubmissionUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
-    user_id: uuid.UUID | None = Field(default=None)
+    name: str | None = Field(default=None)
     total_score: float | None = Field(default=None)
     tiebreaker_strokes: int | None = Field(default=None)
 
 
 # Database model
 class Submission(SubmissionBase, TimestampsMixin, table=True):
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "pool_id",
+            name="uq_submissions_name_pool_id_key",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 

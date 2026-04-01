@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 
 # Shared properties
 class OrganizationBase(SQLModel):
-    name: str = Field(unique=True, max_length=255)
-    external_id: int | None = Field(default=None, nullable=True, unique=True)
+    live_golf_data_id: str = Field(unique=True)
+    name: str = Field(unique=True)
 
 
 # Properties to receive via API on creation
@@ -27,8 +27,7 @@ class OrganizationDelete(SQLModel):
 
 # Properties to receive via API on update
 class OrganizationUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
-    external_id: int | None = None
+    name: str
 
 
 # Database model

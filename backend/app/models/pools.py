@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum as SQLEnum
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 from app.utils import TimestampsMixin
 
@@ -22,14 +22,14 @@ class PoolStatus(StrEnum):
 
 # Shared properties
 class PoolBase(SQLModel):
-    name: str = Field(max_length=255)
-    entry_fee: float | None = Field(default=None, nullable=True)
+    name: str
+    entry_fee: float | None = Field(default=None)
     status: PoolStatus = Field(
         default=PoolStatus.not_started,
         sa_type=SQLEnum(PoolStatus, schema="app", name="poolstatus"),  # type: ignore
     )
     tournament_id: uuid.UUID = Field(
-        foreign_key="app.tournament.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.tournament.id", ondelete="CASCADE"
     )
 
 
@@ -45,14 +45,21 @@ class PoolDelete(SQLModel):
 
 # Properties to receive via API on update
 class PoolUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
+    name: str | None = Field(default=None)
     entry_fee: float | None = Field(default=None)
     status: PoolStatus | None = Field(default=None)
 
 
 # Database model
 class Pool(PoolBase, TimestampsMixin, table=True):
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "tournament_id",
+            name="uq_name_tournament",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 

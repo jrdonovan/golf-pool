@@ -1,6 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
+from pydantic import NonNegativeInt
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils import TimestampsMixin
@@ -12,17 +13,17 @@ if TYPE_CHECKING:
 
 # Shared properties
 class CourseBase(SQLModel):
-    external_id: int | None = Field(default=None, nullable=True)
-    name: str = Field(max_length=255)
-    city: str = Field(max_length=255)
-    state: str = Field(max_length=255)
-    country: str = Field(max_length=255)
-    par_front_nine: int | None = Field(default=None)
-    par_back_nine: int | None = Field(default=None)
-    par_total: int | None = Field(default=None)
-    yardage_front_nine: int | None = Field(default=None)
-    yardage_back_nine: int | None = Field(default=None)
-    yardage_total: int | None = Field(default=None)
+    live_golf_data_id: str = Field(unique=True)
+    name: str
+    city: str | None = Field(default=None)
+    state: str | None = Field(default=None)
+    country: str | None = Field(default=None)
+    par_front_nine: NonNegativeInt | None = Field(default=None)
+    par_back_nine: NonNegativeInt | None = Field(default=None)
+    par_total: NonNegativeInt | None = Field(default=None)
+    yardage_front_nine: NonNegativeInt | None = Field(default=None)
+    yardage_back_nine: NonNegativeInt | None = Field(default=None)
+    yardage_total: NonNegativeInt | None = Field(default=None)
 
 
 # Properties to receive via API on creation
@@ -37,17 +38,16 @@ class CourseDelete(SQLModel):
 
 # Properties to receive via API on update
 class CourseUpdate(SQLModel):
-    external_id: int | None = Field(default=None, nullable=True)
-    name: str | None = Field(default=None, max_length=255)
-    city: str | None = Field(default=None, max_length=255)
-    state: str | None = Field(default=None, max_length=255)
-    country: str | None = Field(default=None, max_length=255)
-    par_front_nine: int | None = Field(default=None)
-    par_back_nine: int | None = Field(default=None)
-    par_total: int | None = Field(default=None)
-    yardage_front_nine: int | None = Field(default=None)
-    yardage_back_nine: int | None = Field(default=None)
-    yardage_total: int | None = Field(default=None)
+    name: str | None = Field(default=None)
+    city: str | None = Field(default=None)
+    state: str | None = Field(default=None)
+    country: str | None = Field(default=None)
+    par_front_nine: NonNegativeInt | None = Field(default=None)
+    par_back_nine: NonNegativeInt | None = Field(default=None)
+    par_total: NonNegativeInt | None = Field(default=None)
+    yardage_front_nine: NonNegativeInt | None = Field(default=None)
+    yardage_back_nine: NonNegativeInt | None = Field(default=None)
+    yardage_total: NonNegativeInt | None = Field(default=None)
 
 
 # Database model

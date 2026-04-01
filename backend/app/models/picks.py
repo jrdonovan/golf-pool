@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 from app.utils import TimestampsMixin
 
@@ -33,7 +33,14 @@ class PickUpdate(SQLModel):
 
 # Database model
 class Pick(PickBase, TimestampsMixin, table=True):
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "submission_id",
+            "player_pool_tier_id",
+            name="uq_submission_player_pool_tier",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 

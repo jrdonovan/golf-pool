@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 from app.utils import TimestampsMixin
 
@@ -12,11 +12,9 @@ if TYPE_CHECKING:
 
 # Shared properties
 class PoolTierBase(SQLModel):
-    name: str = Field(max_length=255)
-    pool_id: uuid.UUID = Field(
-        foreign_key="app.pool.id", nullable=False, ondelete="CASCADE"
-    )
-    description: float | None = Field(default=None, nullable=True, max_length=255)
+    name: str
+    pool_id: uuid.UUID = Field(foreign_key="app.pool.id", ondelete="CASCADE")
+    description: str | None = Field(default=None, max_length=255)
 
 
 # Properties to receive via API on creation
@@ -31,14 +29,21 @@ class PoolTierDelete(SQLModel):
 
 # Properties to receive via API on update
 class PoolTierUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
-    description: float | None = Field(default=None, max_length=255)
+    name: str | None = Field(default=None)
+    description: str | None = Field(default=None)
 
 
 # Database model
 class PoolTier(PoolTierBase, TimestampsMixin, table=True):
     __tablename__ = "pool_tier"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "pool_id",
+            name="uq_pool_tiers_name_pool_id_key",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 

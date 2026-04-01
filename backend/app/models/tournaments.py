@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import NonNegativeInt
+from pydantic_extra_types.timezone_name import TimeZoneName
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
@@ -24,23 +25,33 @@ class TournamentStatus(StrEnum):
     official = "Official"
 
 
+class TournamentFormat(StrEnum):
+    stroke = "stroke"
+    team = "team"
+    team_match = "team match"
+    stableford = "stableford"
+
+
 # Shared properties
 class TournamentBase(SQLModel):
     name: str = Field(max_length=255)
     organization_id: uuid.UUID = Field(
-        foreign_key="app.organization.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.organization.id", ondelete="CASCADE"
     )
     year: int = Field(ge=1900, le=2100)
-    purse: NonNegativeInt | None = Field(default=None, nullable=True)
-    format: str | None = Field(default="stroke")
-    status: TournamentStatus = Field(
-        default=TournamentStatus.not_started,
+    purse: NonNegativeInt | None = Field(default=None)
+    format: TournamentFormat | None = Field(
+        default=None,
+        sa_type=SQLEnum(TournamentFormat, schema="app", name="tournamentformat"),  # type: ignore
+    )
+    status: TournamentStatus | None = Field(
+        default=None,
         sa_type=SQLEnum(TournamentStatus, schema="app", name="tournamentstatus"),  # type: ignore
     )
     start_date: date
     end_date: date
-    timezone: str | None = Field(default=None, max_length=255, nullable=True)
-    external_id: int | None = Field(default=None, nullable=True)
+    timezone: TimeZoneName | None = Field(default=None, max_length=255)
+    live_golf_data_id: str
 
 
 # Properties to receive via API on creation
@@ -55,15 +66,13 @@ class TournamentDelete(SQLModel):
 
 # Properties to receive via API on update
 class TournamentUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
-    organization_id: uuid.UUID | None = Field(default=None)
+    name: str | None = Field(default=None)
     purse: NonNegativeInt | None = Field(default=None)
     format: str | None = Field(default=None)
     status: TournamentStatus | None = Field(default=None)
     start_date: date | None = Field(default=None)
     end_date: date | None = Field(default=None)
-    timezone: str | None = Field(default=None, max_length=255)
-    external_id: int | None = Field(default=None, nullable=True)
+    timezone: TimeZoneName | None = Field(default=None)
 
 
 # Database model
