@@ -268,8 +268,8 @@ class LiveGolfData(APIBase):
         """
         params = ScheduleParams(year=year, orgId=str(org_id)).to_params()
         payload = self.send_request("schedule", params=params)
-        if not isinstance(payload, list):
-            raise RuntimeError("Expected list payload for schedule")
+        if not isinstance(payload, dict):
+            raise RuntimeError("Expected dict payload for schedule")
         return ScheduleData.model_validate(payload)
 
     def get_leaderboard(
