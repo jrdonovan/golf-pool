@@ -355,15 +355,15 @@ class LiveGolfData(APIBase):
         org_id: str,
         tourn_id: str,
         year: int,
-    ) -> list[TournamentData]:
+    ) -> TournamentData:
         """
         Fetches tournament data
         """
         params = TournamentParams(orgId=org_id, tournId=tourn_id, year=year).to_params()
-        payload = self.send_request("tournaments", params=params)
-        if not isinstance(payload, list):
-            raise RuntimeError("Expected list payload for tournaments")
-        return [TournamentData.model_validate(item) for item in payload]
+        payload = self.send_request("tournament", params=params)
+        if not isinstance(payload, dict):
+            raise RuntimeError("Expected dict payload for tournament")
+        return TournamentData.model_validate(payload)
 
     def get_scorecards(
         self,
