@@ -6,6 +6,8 @@ from app.api.deps import SessionDep
 from app.models.tournaments import Tournament
 from app.services.crud.organizations import get_org
 from app.services.crud.tournaments import (
+    get_tournament,
+    import_tournament_details,
     list_tournaments,
     upsert_tournament_from_schedule,
 )
@@ -65,4 +67,50 @@ async def import_tournaments(session: SessionDep, year: int, org_id: uuid.UUID):
         "unchanged": unchanged_count,
         "skipped": skipped_count,
         "total_received": len(schedule_data.schedule),
+    }
+
+
+@router.get("/import-details")
+async def import_tournament_details_route(
+    session: SessionDep, tourn_id: uuid.UUID, year: int
+):
+    """
+    Fetches full tournament details from the external API and upserts into:
+    tournaments, courses, course_holes, tournament_courses, players, player_tournaments.
+    """
+    # Validate that existing tournament exists in db
+    db_tournament = get_tournament(session=session, tournament_id=tourn_id)
+    if not db_tournament:
+        raise HTTPException(
+            status_code=404, detail=f"Tournament with id {tourn_id} not found."
+        )
+
+    lgd_client = LiveGolfData()
+    try:
+        lgd_tournament = lgd_client.get_tournament(
+            org_id=db_tournament.organization.live_golf_data_id,
+            tourn_id=db_tournament.live_golf_data_id,
+            year=year,
+        )
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=404, detail=str(e)
+        )  # Update this to dynamically determine status code based on server response
+
+    results = []
+    summary = import_tournament_details(
+        session=session,
+        organization_id=db_tournament.organization.id,
+        incoming_data=lgd_tournament,
+    )
+    results.append(summary)
+
+    session.commit()
+
+    return {
+        "message": "Tournament details import complete",
+        "org_id": str(db_tournament.organization.id),
+        "tourn_id": tourn_id,
+        "year": year,
+        "results": results,
     }

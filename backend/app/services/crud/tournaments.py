@@ -10,7 +10,12 @@ from app.models.tournaments import (
     TournamentStatus,
     TournamentUpdate,
 )
+from app.services.crud.courses import upsert_course_from_data, upsert_tournament_course
 from app.services.crud.organizations import get_org
+from app.services.crud.players import (
+    upsert_player_from_tournament_data,
+    upsert_player_tournament,
+)
 from app.services.mappers.tournaments import TournamentMapperFactory
 
 if TYPE_CHECKING:
@@ -164,3 +169,75 @@ def delete_tournament(*, session: Session, tournament_in: TournamentDelete) -> A
     session.delete(db_tournament)
     session.commit()
     return {"ok": True}
+
+
+def import_tournament_details(
+    *,
+    session: Session,
+    organization_id: uuid.UUID,
+    incoming_data: "TournamentData",
+) -> dict:
+    """
+    Orchestrates a full upsert from a TournamentData API response into:
+    tournaments, courses, course_holes, tournament_courses, players, player_tournaments.
+    Does NOT commit — caller is responsible for session.commit().
+    """
+    db_tournament, t_result = upsert_tournament_from_details(
+        session=session, organization_id=organization_id, incoming_data=incoming_data
+    )
+
+    # Need the tournament PK before linking courses/players
+    session.flush()
+
+    courses_created = courses_updated = courses_unchanged = 0
+    for course_data in incoming_data.courses:
+        db_course, c_result = upsert_course_from_data(
+            session=session, incoming_data=course_data
+        )
+        # flush so course.id is populated before linking
+        session.flush()
+        upsert_tournament_course(
+            session=session,
+            tournament_id=db_tournament.id,
+            course_id=db_course.id,
+        )
+        if c_result == "created":
+            courses_created += 1
+        elif c_result == "updated":
+            courses_updated += 1
+        else:
+            courses_unchanged += 1
+
+    players_created = players_updated = players_unchanged = 0
+    for player_data in incoming_data.players:
+        db_player, p_result = upsert_player_from_tournament_data(
+            session=session, incoming_data=player_data
+        )
+        session.flush()
+        upsert_player_tournament(
+            session=session,
+            player_id=db_player.id,
+            tournament_id=db_tournament.id,
+        )
+        if p_result == "created":
+            players_created += 1
+        elif p_result == "updated":
+            players_updated += 1
+        else:
+            players_unchanged += 1
+
+    return {
+        "tournament": t_result,
+        "courses": {
+            "created": courses_created,
+            "updated": courses_updated,
+            "unchanged": courses_unchanged,
+            "total": len(incoming_data.courses),
+        },
+        "players": {
+            "created": players_created,
+            "updated": players_updated,
+            "unchanged": players_unchanged,
+            "total": len(incoming_data.players),
+        },
+    }
