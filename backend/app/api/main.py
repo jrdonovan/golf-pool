@@ -5,6 +5,7 @@ from app.api.routes import (
     organizations,
     pools,
     private,
+    submissions,
     tournaments,
     users,
     utils,
@@ -18,6 +19,7 @@ api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(tournaments.router)
 api_router.include_router(pools.router)
+api_router.include_router(submissions.router)
 
 
 if settings.ENVIRONMENT == "local":
