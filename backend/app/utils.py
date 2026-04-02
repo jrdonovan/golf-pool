@@ -4,10 +4,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-import emails  # type: ignore
+import emails
 import jwt
 from jinja2 import Template
 from jwt.exceptions import InvalidTokenError
+from sqlmodel import TIMESTAMP, Field
 
 from app.core import security
 from app.core.config import settings
@@ -18,6 +19,21 @@ logger = logging.getLogger(__name__)
 
 def get_datetime_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class TimestampsMixin:
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=TIMESTAMP(timezone=True),  # type: ignore
+        nullable=False,
+    )
+
+    updated_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=TIMESTAMP(timezone=True),  # type: ignore
+        sa_column_kwargs={"onupdate": get_datetime_utc},
+        nullable=False,
+    )
 
 
 @dataclass

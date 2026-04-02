@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 import requests
@@ -53,7 +54,8 @@ class APIBase:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            return response.json()
+            payload = response.json()
+            return self._normalize_extended_json(payload)
         except requests.exceptions.HTTPError as http_err:
             raise RuntimeError(
                 f"HTTP error occurred: {http_err} - Response: {response.text}"
@@ -65,3 +67,33 @@ class APIBase:
 
     def close(self) -> None:
         self.session.close()
+
+    def _normalize_extended_json(self, value: Any) -> Any:
+        if isinstance(value, list):
+            return [self._normalize_extended_json(item) for item in value]
+
+        if not isinstance(value, dict):
+            return value
+
+        if len(value) == 1:
+            if "$numberInt" in value:
+                return int(value["$numberInt"])
+            if "$numberLong" in value:
+                return int(value["$numberLong"])
+            if "$numberDouble" in value:
+                return float(value["$numberDouble"])
+            if "$numberDecimal" in value:
+                return float(value["$numberDecimal"])
+            if "$date" in value:
+                date_value = value["$date"]
+                if isinstance(date_value, dict) and "$numberLong" in date_value:
+                    return datetime.fromtimestamp(
+                        int(date_value["$numberLong"]) / 1000, tz=UTC
+                    )
+                if isinstance(date_value, str):
+                    return date_value
+
+        return {
+            key: self._normalize_extended_json(item_value)
+            for key, item_value in value.items()
+        }

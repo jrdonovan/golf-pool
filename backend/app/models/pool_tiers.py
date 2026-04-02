@@ -1,24 +1,20 @@
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
-    from .picks import Pick
+    from .player_pool_tiers import PlayerPoolTier
     from .pools import Pool
 
 
 # Shared properties
 class PoolTierBase(SQLModel):
-    name: str = Field(max_length=255)
-    pool_id: uuid.UUID = Field(
-        foreign_key="app.pool.id", nullable=False, ondelete="CASCADE"
-    )
-    description: float | None = Field(default=None, nullable=True, max_length=255)
+    name: str
+    pool_id: uuid.UUID = Field(foreign_key="app.pool.id", ondelete="CASCADE")
+    description: str | None = Field(default=None, max_length=255)
 
 
 # Properties to receive via API on creation
@@ -33,21 +29,25 @@ class PoolTierDelete(SQLModel):
 
 # Properties to receive via API on update
 class PoolTierUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
-    description: float | None = Field(default=None, max_length=255)
+    name: str | None = Field(default=None)
+    description: str | None = Field(default=None)
 
 
 # Database model
-class PoolTier(PoolTierBase, table=True):
+class PoolTier(PoolTierBase, TimestampsMixin, table=True):
     __tablename__ = "pool_tier"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "pool_id",
+            name="uq_pool_tiers_name_pool_id_key",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     pool: "Pool" = Relationship(back_populates="tiers")
-    picks: list["Pick"] = Relationship(back_populates="pool_tier", cascade_delete=True)
+    player_pool_tiers: list["PlayerPoolTier"] = Relationship(
+        back_populates="pool_tier", cascade_delete=True
+    )

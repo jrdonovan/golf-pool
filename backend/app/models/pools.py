@@ -1,13 +1,11 @@
 import uuid
-from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .pool_tiers import PoolTier
@@ -24,11 +22,14 @@ class PoolStatus(StrEnum):
 
 # Shared properties
 class PoolBase(SQLModel):
-    name: str = Field(max_length=255)
-    entry_fee: float | None = Field(default=None, nullable=True)
+    name: str
+    entry_fee: float | None = Field(default=None)
     status: PoolStatus = Field(
         default=PoolStatus.not_started,
         sa_type=SQLEnum(PoolStatus, schema="app", name="poolstatus"),  # type: ignore
+    )
+    tournament_id: uuid.UUID = Field(
+        foreign_key="app.tournament.id", ondelete="CASCADE"
     )
 
 
@@ -44,24 +45,23 @@ class PoolDelete(SQLModel):
 
 # Properties to receive via API on update
 class PoolUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
+    name: str | None = Field(default=None)
     entry_fee: float | None = Field(default=None)
     status: PoolStatus | None = Field(default=None)
 
 
 # Database model
-class Pool(PoolBase, table=True):
-    __table_args__ = {"schema": "app"}
+class Pool(PoolBase, TimestampsMixin, table=True):
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "tournament_id",
+            name="uq_name_tournament",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    tournament_id: uuid.UUID = Field(
-        foreign_key="app.tournament.id", nullable=False, ondelete="CASCADE"
-    )
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     tournament: "Tournament" = Relationship(back_populates="pools")
 

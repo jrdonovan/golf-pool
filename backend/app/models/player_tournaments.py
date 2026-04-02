@@ -1,11 +1,10 @@
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from pydantic import NonNegativeInt, PositiveInt
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .player_rounds import PlayerRound
@@ -15,17 +14,17 @@ if TYPE_CHECKING:
 
 # Shared properties
 class PlayerTournamentBase(SQLModel):
-    player_id: uuid.UUID = Field(
-        foreign_key="app.player.id", nullable=False, ondelete="CASCADE"
-    )
+    player_id: uuid.UUID = Field(foreign_key="app.player.id", ondelete="CASCADE")
     tournament_id: uuid.UUID = Field(
-        foreign_key="app.tournament.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.tournament.id", ondelete="CASCADE"
     )
-    position: int | None = Field(default=None, nullable=True)
-    total_score: int | None = Field(default=None, nullable=True)
+    position: PositiveInt | None = Field(default=None)
+    total_score: int | None = Field(default=None)
+    strokes: NonNegativeInt | None = Field(default=None)
     missed_cut: bool = Field(default=False)
     withdrawn: bool = Field(default=False)
-    points: float = Field(default=0.0)
+    disqualified: bool = Field(default=False)
+    points: float = Field(default=0)
 
 
 # Properties to receive via API on creation
@@ -40,24 +39,28 @@ class PlayerTournamentDelete(SQLModel):
 
 # Properties to receive via API on update
 class PlayerTournamentUpdate(SQLModel):
-    position: int | None = Field(default=None)
+    position: PositiveInt | None = Field(default=None)
     total_score: int | None = Field(default=None)
+    strokes: NonNegativeInt | None = Field(default=None)
     missed_cut: bool | None = Field(default=None)
     withdrawn: bool | None = Field(default=None)
+    disqualified: bool | None = Field(default=None)
     points: float | None = Field(default=None)
 
 
 # Database model
-class PlayerTournament(PlayerTournamentBase, table=True):
+class PlayerTournament(PlayerTournamentBase, TimestampsMixin, table=True):
     __tablename__ = "player_tournament"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "tournament_id",
+            name="uq_player_tournament",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     player: "Player" = Relationship(back_populates="player_tournaments")
 

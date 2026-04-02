@@ -1,14 +1,12 @@
 import uuid
-from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from pydantic import PositiveInt
-from sqlalchemy import DateTime
+from pydantic import NonNegativeInt, PositiveInt
 from sqlalchemy import Enum as SQLEnum
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .course_holes import CourseHole
@@ -29,19 +27,19 @@ class HoleResult(StrEnum):
 # Shared properties
 class PlayerHoleBase(SQLModel):
     player_round_id: uuid.UUID = Field(
-        foreign_key="app.player_round.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.player_round.id", ondelete="CASCADE"
     )
     course_hole_id: uuid.UUID = Field(
-        foreign_key="app.course_hole.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.course_hole.id", ondelete="CASCADE"
     )
-    strokes: PositiveInt = Field(ge=1)
+    strokes: NonNegativeInt = Field(default=0)
     score_to_par: int = Field(default=0)
     result: HoleResult | None = Field(
         default=None,
         sa_type=SQLEnum(HoleResult, schema="app", name="holeresult"),  # type: ignore
     )
     is_playoff_hole: bool = Field(default=False)
-    play_order: PositiveInt = Field(ge=1)
+    play_order: PositiveInt
 
 
 # Properties to receive via API on creation
@@ -56,27 +54,27 @@ class PlayerHoleDelete(SQLModel):
 
 # Properties to receive via API on update
 class PlayerHoleUpdate(SQLModel):
-    strokes: PositiveInt | None = Field(default=None, ge=1)
+    strokes: NonNegativeInt | None = Field(default=None)
     score_to_par: int | None = Field(default=None)
-    result: HoleResult | None = Field(
-        default=None,
-        sa_type=SQLEnum(HoleResult, schema="app", name="holeresult"),  # type: ignore
-    )
+    result: HoleResult | None = Field(default=None)
     is_playoff_hole: bool | None = Field(default=None)
-    play_order: PositiveInt | None = Field(default=None, ge=1)
+    play_order: PositiveInt | None = Field(default=None)
 
 
 # Database model
-class PlayerHole(PlayerHoleBase, table=True):
+class PlayerHole(PlayerHoleBase, TimestampsMixin, table=True):
     __tablename__ = "player_hole"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "player_round_id",
+            "course_hole_id",
+            "play_order",
+            name="uq_player_hole_round_hole_order",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     player_round: "PlayerRound" = Relationship(back_populates="player_holes")
 

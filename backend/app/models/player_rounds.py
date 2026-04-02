@@ -2,11 +2,10 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import PositiveInt
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from pydantic import NonNegativeInt, PositiveInt
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .player_holes import PlayerHole
@@ -18,18 +17,19 @@ if TYPE_CHECKING:
 # Shared properties
 class PlayerRoundBase(SQLModel):
     player_tournament_id: uuid.UUID = Field(
-        foreign_key="app.player_tournament.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.player_tournament.id", ondelete="CASCADE"
     )
     tournament_round_id: uuid.UUID = Field(
-        foreign_key="app.tournament_round.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.tournament_round.id", ondelete="CASCADE"
     )
     tournament_course_id: uuid.UUID = Field(
-        foreign_key="app.tournament_course.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.tournament_course.id", ondelete="CASCADE"
     )
-    tee_time: datetime | None = Field(default=None, nullable=True)
+    tee_time: datetime | None = Field(default=None)
     is_complete: bool = Field(default=False)
-    strokes: PositiveInt = Field(default=0)
-    starting_hole: PositiveInt = Field(ge=1, le=18)
+    strokes: NonNegativeInt = Field(default=0)
+    score_to_par: int = Field(default=0)
+    starting_hole: PositiveInt = Field(default=1, le=18)
 
 
 # Properties to receive via API on creation
@@ -46,21 +46,25 @@ class PlayerRoundDelete(SQLModel):
 class PlayerRoundUpdate(SQLModel):
     tee_time: datetime | None = Field(default=None)
     is_complete: bool | None = Field(default=None)
-    strokes: PositiveInt | None = Field(default=None)
-    starting_hole: PositiveInt | None = Field(default=None, ge=1, le=18)
+    strokes: NonNegativeInt | None = Field(default=None)
+    score_to_par: int | None = Field(default=None)
+    starting_hole: PositiveInt | None = Field(default=None, le=18)
 
 
 # Database model
-class PlayerRound(PlayerRoundBase, table=True):
+class PlayerRound(PlayerRoundBase, TimestampsMixin, table=True):
     __tablename__ = "player_round"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint(
+            "player_tournament_id",
+            "tournament_course_id",
+            "tournament_round_id",
+            name="uq_player_course_round",
+        ),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     player_tournament: "PlayerTournament" = Relationship(back_populates="player_rounds")
 

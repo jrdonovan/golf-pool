@@ -1,14 +1,14 @@
 import uuid
-from datetime import date, datetime
+from datetime import date
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from pydantic import PositiveInt
-from sqlalchemy import DateTime
+from pydantic import NonNegativeInt
+from pydantic_extra_types.timezone_name import TimeZoneName
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .organizations import Organization
@@ -25,22 +25,33 @@ class TournamentStatus(StrEnum):
     official = "Official"
 
 
+class TournamentFormat(StrEnum):
+    stroke = "stroke"
+    team = "team"
+    team_match = "team match"
+    stableford = "stableford"
+
+
 # Shared properties
 class TournamentBase(SQLModel):
     name: str = Field(max_length=255)
     organization_id: uuid.UUID = Field(
-        foreign_key="app.organization.id", nullable=False, ondelete="CASCADE"
+        foreign_key="app.organization.id", ondelete="CASCADE"
     )
-    purse: PositiveInt | None = Field(default=None, nullable=True)
-    format: str | None = Field(default="stroke")
-    status: TournamentStatus = Field(
-        default=TournamentStatus.not_started,
+    year: int = Field(ge=1900, le=2100)
+    purse: NonNegativeInt | None = Field(default=None)
+    format: TournamentFormat | None = Field(
+        default=None,
+        sa_type=SQLEnum(TournamentFormat, schema="app", name="tournamentformat"),  # type: ignore
+    )
+    status: TournamentStatus | None = Field(
+        default=None,
         sa_type=SQLEnum(TournamentStatus, schema="app", name="tournamentstatus"),  # type: ignore
     )
     start_date: date
     end_date: date
-    timezone: str | None = Field(default=None, max_length=255, nullable=True)
-    external_id: int | None = Field(default=None, nullable=True, unique=True)
+    timezone: TimeZoneName | None = Field(default=None, max_length=255)
+    live_golf_data_id: str
 
 
 # Properties to receive via API on creation
@@ -55,32 +66,25 @@ class TournamentDelete(SQLModel):
 
 # Properties to receive via API on update
 class TournamentUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=255)
-    organization_id: uuid.UUID | None = Field(default=None)
-    purse: PositiveInt | None = Field(default=None)
+    name: str | None = Field(default=None)
+    purse: NonNegativeInt | None = Field(default=None)
     format: str | None = Field(default=None)
     status: TournamentStatus | None = Field(default=None)
     start_date: date | None = Field(default=None)
     end_date: date | None = Field(default=None)
-    timezone: str | None = Field(default=None, max_length=255)
-    external_id: int | None = Field(default=None, nullable=True)
+    timezone: TimeZoneName | None = Field(default=None)
 
 
 # Database model
-class Tournament(TournamentBase, table=True):
+class Tournament(TournamentBase, TimestampsMixin, table=True):
     __table_args__ = (
         UniqueConstraint(
-            "name", "organization_id", "start_date", name="uq_tournament_name_org_start"
+            "name", "organization_id", "year", name="uq_tournament_name_org_year"
         ),
         {"schema": "app"},
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     organization: "Organization" = Relationship(back_populates="tournaments")
 
@@ -97,14 +101,3 @@ class Tournament(TournamentBase, table=True):
     tournament_rounds: list["TournamentRound"] = Relationship(
         back_populates="tournament", cascade_delete=True
     )
-
-
-class TournamentPublic(TournamentBase):
-    id: uuid.UUID
-    organization_id: uuid.UUID
-    created_at: datetime | None
-    updated_at: datetime | None
-
-
-class TournamentsPublic(TournamentBase):
-    data: list[TournamentPublic]

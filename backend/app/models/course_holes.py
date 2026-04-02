@@ -1,11 +1,10 @@
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from pydantic import NonNegativeInt
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-from app.utils import get_datetime_utc
+from app.utils import TimestampsMixin
 
 if TYPE_CHECKING:
     from .courses import Course
@@ -14,11 +13,9 @@ if TYPE_CHECKING:
 
 # Shared properties
 class CourseHoleBase(SQLModel):
-    course_id: uuid.UUID = Field(
-        foreign_key="app.course.id", nullable=False, ondelete="CASCADE"
-    )
-    hole_number: int = Field(nullable=False)
-    par: int = Field(nullable=False)
+    course_id: uuid.UUID = Field(foreign_key="app.course.id", ondelete="CASCADE")
+    hole_number: NonNegativeInt = Field(le=18)
+    par: NonNegativeInt
 
 
 # Properties to receive via API on creation
@@ -33,20 +30,18 @@ class CourseHoleDelete(SQLModel):
 
 # Properties to receive via API on update
 class CourseHoleUpdate(SQLModel):
-    par: int  # Par is the only updatable field for a course hole, as hole number and course association should be immutable after creation
+    par: NonNegativeInt  # Par is the only updatable field for a course hole, as hole number and course association should be immutable after creation
 
 
 # Database model
-class CourseHole(CourseHoleBase, table=True):
+class CourseHole(CourseHoleBase, TimestampsMixin, table=True):
     __tablename__ = "course_hole"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        UniqueConstraint("course_id", "hole_number", name="uq_course_hole_number"),
+        {"schema": "app"},
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    updated_at: datetime | None = Field(sa_type=DateTime(timezone=True))  # type: ignore
 
     course: "Course" = Relationship(back_populates="holes")
 
